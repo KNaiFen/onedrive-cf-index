@@ -134,7 +134,7 @@ function renderImage(file) {
 function renderVideoPlayer(file, fileExt) {
   return `<div>
     <div class="artplayer-app" style="width: auto; height: 60vh; position: relative;"></div>
-    <table class="timeline" cellspacing="10px"></table>
+    <table class="timeline" cellpadding="10px" cellspacing="0"></table>
   </div>
   <script>
   var danmaku_area = 0.05
@@ -333,7 +333,20 @@ fetch('https://dm.asdanmaku.com/Pbf/${file.name.replace('.mp4', '.pbf')}')
         console.log(highlight)
         art.option.highlight = highlight;
     })
-</script>`
+</script>
+<style>
+  .timeline tr:hover td{
+    background-color:#cccccc;
+  }
+  @media (prefers-color-scheme: dark) {
+    .timeline tr:hover td{
+      background-color:#333333;
+    }
+    .timeline td{
+      color:white;
+    }
+  }
+</style>`
 }
 
 /**
