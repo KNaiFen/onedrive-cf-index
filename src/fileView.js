@@ -1,10 +1,19 @@
 import marked from 'marked'
 
-import { renderHTML } from './render/htmlWrapper'
-import { renderPath } from './render/pathUtil'
-import { renderMarkdown } from './render/mdRenderer'
+import {
+  renderHTML
+} from './render/htmlWrapper'
+import {
+  renderPath
+} from './render/pathUtil'
+import {
+  renderMarkdown
+} from './render/mdRenderer'
 
-import { preview, extensions } from './render/fileExtension'
+import {
+  preview,
+  extensions
+} from './render/fileExtension'
 
 /**
  * Render code blocks with the help of marked and Markdown grammar
@@ -123,17 +132,208 @@ function renderImage(file) {
  * @param {string} fileExt The file extension parsed
  */
 function renderVideoPlayer(file, fileExt) {
-  return `<div id="dplayer"></div>
-          <script>
-          dp = new DPlayer({
-            container: document.getElementById('dplayer'),
-            theme: '#0070f3',
-            video: {
-              url: '${file['@microsoft.graph.downloadUrl']}',
-              type: '${fileExt}'
+  return `<div>
+    <div class="artplayer-app" style="width: auto; height: 60vh; position: relative;"></div>
+    <table class="timeline" cellspacing="10px"></table>
+  </div>
+  <script>
+  var danmaku_area = 0.05
+  var art = new Artplayer({
+    container: document.querySelector('.artplayer-app'),
+    url: '${file['@microsoft.graph.downloadUrl']}',
+    plugins: [artplayerPluginDanmuku({
+        danmuku: 'https://dm.asdanmaku.com/Xml/${file.name.replace('.mp4', '.xml')}',
+        speed: 11,
+        // 全局持续时间
+        opacity: 0.7,
+        // 全局透明度
+        size: 30,
+        // 全局字体大小
+        maxlength: 100,
+        // 全局最大长度
+        synchronousPlayback: true,
+        // 是否同步到播放速度
+        margin: [0, 0]
+    }), ],
+    settings: [{
+            width: 150,
+            html: '弹幕开关',
+            selector: [{
+                    default: true,
+                    html: '显示',
+                    showDanmuku: true
+                },
+                {
+                    html: '隐藏',
+                    showDanmuku: false
+                },
+            ],
+            onSelect: function (item) {
+                if (item.showDanmuku) {
+                    art.plugins.artplayerPluginDanmuku.show();
+                } else {
+                    art.plugins.artplayerPluginDanmuku.hide();
+                }
+            },
+        },
+        {
+          width: 150,
+          html: '弹幕显示区域',
+          selector: [{
+                  html: '四分之一屏',
+                  danmaku_area: 0.75
+              },
+              {
+                  html: '半屏',
+                  danmaku_area: 0.5
+              },
+              {
+                  html: '四分之三屏',
+                  danmaku_area: 0.25
+              },
+              {
+                  default: true,
+                  html: '全屏',
+                  danmaku_area: 0.05
+              },
+          ],
+          onSelect: function (item) {
+              danmaku_area = item.danmaku_area;
+              art.plugins.artplayerPluginDanmuku.config().option.margin[1] = art.height * item.danmaku_area;
+          },
+        },
+        {
+            width: 150,
+            html: '弹幕大小',
+            selector: [{
+                    html: '较小 (15px)',
+                    size: 15
+                },
+                {
+                    html: '小 (20px)',
+                    size: 20
+                },
+                {
+                    default: true,
+                    html: '较小 (25px)',
+                    size: 25
+                },
+                {
+                    html: '适中 (30px)',
+                    size: 30
+                },
+                {
+                    html: '较大 (40px)',
+                    size: 40
+                },
+                {
+                    html: '很大 (50px)',
+                    size: 50
+                },
+            ],
+            onSelect: function (item) {
+                art.plugins.artplayerPluginDanmuku.config({
+                    fontSize: item.size,
+                }).option.margin[1] = art.height * danmaku_area;
+            },
+        },
+        {
+            width: 150,
+            html: '弹幕不透明度',
+            selector: [{
+                    html: '30%',
+                    opacity: 0.3
+                },
+                {
+                    html: '50%',
+                    opacity: 0.5
+                },
+                {
+                    default: true,
+                    html: '70%',
+                    opacity: 0.7
+                },
+                {
+                    html: '90%',
+                    opacity: 0.9
+                },
+                {
+                    html: '100%',
+                    opacity: 1.0
+                }
+            ],
+            onSelect: function (item) {
+                art.plugins.artplayerPluginDanmuku.config({
+                    opacity: item.opacity,
+                }).option.margin[1] = art.height * danmaku_area;
+            },
+        }
+    ],
+    setting: true,
+    whitelist: ['*'],
+    autoSize: true,
+    autoMini: true,
+    flip: true,
+    volume: 0.5,
+    rotate: true,
+    playbackRate: true,
+    hotkey: true,
+    pip: true,
+    fullscreen: true,
+    fullscreenWeb: true,
+});
+
+pluginOption = art.plugins.artplayerPluginDanmuku.config().option;
+art.on('resize', () => {
+    pluginOption.margin[1] = art.height * danmaku_area;
+});
+
+fetch('https://dm.asdanmaku.com/Pbf/${file.name.replace('.mp4', '.pbf')}')
+    .then(response => response.text())
+    .then(rawPBFStr => {
+
+        var timelineTable = document.querySelector('.timeline')
+        var highlight = []
+
+        var rawPBFList = rawPBFStr.split(/[(\\r\\n)\\r\\n]+/);
+        rawPBFList.shift()
+        rawPBFList.forEach(PBFItem => {
+            if (!PBFItem) {
+                return
             }
-          })
-          </script>`
+            var PBFParts = PBFItem.split('*')
+            if (PBFParts.length <= 2) {
+                return
+            }
+            var timeMarker = PBFParts.shift()
+            var timeMarkerParts = timeMarker.split('=')
+            var time = parseInt(timeMarkerParts[1]) / 1000
+            var text = PBFParts[0]
+
+            timeButtonTd = document.createElement('td');
+            timeButtonTd.innerText = new Date(time * 1000).toISOString().substr(11, 8);
+            timeTextTd = document.createElement('td');
+            timeTextTd.innerText = text;
+
+            timelineRow = document.createElement('tr');
+            timelineRow.style.cursor = "pointer";
+            timelineRow.addEventListener('click', () => {
+                art.seek = time;
+            })
+            timelineRow.appendChild(timeButtonTd);
+            timelineRow.appendChild(timeTextTd);
+            timelineTable.appendChild(timelineRow);
+
+            highlight.push({
+                "time": time,
+                "text": text
+            });
+        });
+
+        console.log(highlight)
+        art.option.highlight = highlight;
+    })
+</script>`
 }
 
 /**
@@ -148,7 +348,7 @@ function renderAudioPlayer(file) {
             container: document.getElementById('aplayer'),
             theme: '#0070f3',
             audio: [{
-              name: '${file.name}',
+              name: '${file.name.replace(/'/g, '%27')}',
               url: '${file['@microsoft.graph.downloadUrl']}'
             }]
           })
@@ -212,15 +412,15 @@ export async function renderFilePreview(file, path, fileExt, cacheUrl) {
   const body = div(
     'container',
     div('path', renderPath(path) + ` / ${file.name}`) +
-      div('items', el('div', ['style="padding: 1rem 1rem;"'], await renderPreview(file, fileExt, cacheUrl))) +
-      div(
-        'download-button-container',
-        el(
-          'a',
-          ['class="download-button"', `href="${file['@microsoft.graph.downloadUrl']}"`, 'data-turbolinks="false"'],
-          '<i class="far fa-arrow-alt-circle-down"></i> DOWNLOAD'
-        )
+    div('items', el('div', ['style="padding: 1rem 1rem;"'], await renderPreview(file, fileExt, cacheUrl))) +
+    div(
+      'download-button-container',
+      el(
+        'a',
+        ['class="download-button"', `href="${file['@microsoft.graph.downloadUrl']}"`, 'data-turbolinks="false"'],
+        '<i class="far fa-arrow-alt-circle-down"></i> DOWNLOAD'
       )
+    )
   )
   return renderHTML(body)
 }
