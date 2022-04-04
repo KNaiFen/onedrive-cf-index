@@ -138,6 +138,7 @@ function renderVideoPlayer(file, fileExt) {
   </div>
   <script>
   var danmaku_area = 0.05
+  var danmaku_size = 30
   var art = new Artplayer({
     container: document.querySelector('.artplayer-app'),
     url: '${file['@microsoft.graph.downloadUrl']}',
@@ -199,7 +200,8 @@ function renderVideoPlayer(file, fileExt) {
           ],
           onSelect: function (item) {
               danmaku_area = item.danmaku_area;
-              art.plugins.artplayerPluginDanmuku.config().option.margin[1] = art.height * item.danmaku_area;
+              pluginOption.margin[0] = -danmaku_size;
+              pluginOption.margin[1] = art.height * item.danmaku_area;
           },
         },
         {
@@ -232,9 +234,10 @@ function renderVideoPlayer(file, fileExt) {
                 },
             ],
             onSelect: function (item) {
-                art.plugins.artplayerPluginDanmuku.config({
-                    fontSize: item.size,
-                }).option.margin[1] = art.height * danmaku_area;
+              danmaku_size = item.size
+              pluginOption.fontSize = danmaku_size;
+              pluginOption.margin[0] = -danmaku_size;
+              pluginOption.margin[1] = art.height * item.danmaku_area;
             },
         },
         {
@@ -263,9 +266,9 @@ function renderVideoPlayer(file, fileExt) {
                 }
             ],
             onSelect: function (item) {
-                art.plugins.artplayerPluginDanmuku.config({
-                    opacity: item.opacity,
-                }).option.margin[1] = art.height * danmaku_area;
+              pluginOption.opacity = item.opacity;
+              pluginOption.margin[0] = -danmaku_size;
+              pluginOption.margin[1] = art.height * item.danmaku_area;
             },
         }
     ],
@@ -283,9 +286,15 @@ function renderVideoPlayer(file, fileExt) {
     fullscreenWeb: true,
 });
 
-pluginOption = art.plugins.artplayerPluginDanmuku.config().option;
+var plugin = art.plugins.artplayerPluginDanmuku.config()
+var pluginOption = plugin.option;
 art.on('resize', () => {
-    pluginOption.margin[1] = art.height * danmaku_area;
+  pluginOption.margin[0] = -danmaku_size;
+  pluginOption.margin[1] = art.height * danmaku_area;
+});
+art.on('video:play', () => {
+  pluginOption.margin[0] = -danmaku_size;
+  pluginOption.margin[1] = art.height * danmaku_area;
 });
 
 fetch('https://dm.asdanmaku.com/Pbf/${file.name.replace('.mp4', '.pbf')}')
